@@ -22,40 +22,37 @@ shinyServer(function(input, output) {
   mp <- mapview(finaldata, zcol="SCH_TYPE", legend=TRUE, cex=8,
            popup=popupTable(pop)) 
   
-  output$leaflet <- renderMapview(mp) 
+  output$mapview <- renderMapview(mp) 
   
-  clicked_leaflet <- reactiveValues(clickedMarker=NULL)
-  observeEvent(input$leaflet_marker_click,{
-    clicked_leaflet$clickedMarker <- input$leaflet_marker_click
+  clicked_mapview <- reactiveValues(clickedMarker=NULL)
+  observeEvent(input$mapview_marker_click,{
+    clicked_mapview$clickedMarker <- input$mapview_marker_click
   })
   
   
   selected_coordinates= reactive(({
-    c(clicked_leaflet$clickedMarker$lng,clicked_leaflet$clickedMarker$lat)
+    c(clicked_mapview$clickedMarker$lng,clicked_mapview$clickedMarker$lat)
   }))
   
   output$fish=renderTable({
     selected_data()
   })
   
-  selected_data= reactive(({
-    if(is.null(clicked_leaflet$clickedMarker))
+  selected_data <- reactive(({
+    if(is.null(clicked_mapview$clickedMarker))
       return(NULL)
     
-    filter(collected_data, longitude == as.numeric(as.character(selected_coordinates()[1])),latitude==as.numeric(as.character(selected_coordinates()[2])))
+    filter(finaldata, X == as.numeric(as.character(selected_coordinates()[1])), Y==as.numeric(as.character(selected_coordinates()[2])))
   }))
   
-  output$max_min_temperature_plotly_16days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
+  output$school_info=renderPlotly({
+    sch=selected_data()
+    if(is.null(sch))
       return(NULL)
     plot_ly() %>%
-      add_lines(x = temp$date, y = temp$max_temperature, name = "Maximum Temperature") %>%
-      add_lines(x = temp$date, y = temp$min_temperature, name = "Minimum Temperature")%>%
-      add_lines(x = temp$date, y = temp$day_temperature, name = "Day Temperature") %>%
-      add_lines(x = temp$date, y = temp$night_temperature, name = "Night Temperature") %>%
-      add_lines(x = temp$date, y = temp$eve_temperature, name = "Evening Temperature") %>%
-      add_lines(x = temp$date, y = temp$morn_temperature, name = "Morning Temperature") %>%
+      add_bars(y = sch$Science, name = "MCAS Science Score") %>%
+      add_bars(y = sch$Math, name = "Standardized MCAS Math Score")%>%
+      add_bars(y = sch$ELA, name = "Standardized MCAS ELA Score")%>%
       layout(title = '',
              legend = list(orientation = 'h'),
              xaxis = list(title = ""))

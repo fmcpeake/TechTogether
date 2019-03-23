@@ -4,10 +4,10 @@ shinyUI(fluidPage(
   fluidRow(
     column(width=6,align="left",
            br(),
-           tags$h4(tags$strong("Leaflet, Plotly and Shiny: Weather Forecasts In The Northeast",
+           tags$h4(tags$strong("Boston Schools and Crime",
                                style="text-align:center;color: #0000ff")),
            
-           leafletOutput("leaflet",height = 500)
+           leafletOutput("mapview",height = 500)
     ),
     
     column(width=6,align="center",
