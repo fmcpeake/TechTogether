@@ -19,11 +19,10 @@ shinyServer(function(input, output) {
   
   coordinates(finaldata) <- ~ X + Y
   proj4string(finaldata) <- "+init=epsg:4326"
-  # mapview(finaldata, zcol="SCH_TYPE", legend=TRUE, cex=8,
-  #         popup=popupTable(pop)) 
+  mp <- mapview(finaldata, zcol="SCH_TYPE", legend=TRUE, cex=8,
+           popup=popupTable(pop)) 
   
-  output$leaflet <- renderMapview(finaldata, zcol="SCH_TYPE", legend=TRUE, cex=8,
-                                  popup=popupTable(pop)) 
+  output$leaflet <- renderMapview(mp) 
   
   clicked_leaflet <- reactiveValues(clickedMarker=NULL)
   observeEvent(input$leaflet_marker_click,{

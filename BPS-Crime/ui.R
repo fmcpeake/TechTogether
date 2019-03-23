@@ -2,7 +2,7 @@ library(leaflet)
 library(plotly)
 shinyUI(fluidPage(
   fluidRow(
-    column(width=6,align="center",
+    column(width=6,align="left",
            br(),
            tags$h4(tags$strong("Leaflet, Plotly and Shiny: Weather Forecasts In The Northeast",
                                style="text-align:center;color: #0000ff")),
