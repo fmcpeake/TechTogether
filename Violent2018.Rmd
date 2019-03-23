@@ -1,0 +1,523 @@
+---
+title: "Crime2018"
+author: "Fionnuala McPeake"
+date: "December 2, 2018"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(readxl)
+library(httr)
+library(tidyverse)
+library(XML)
+library(lme4)
+library(arm)
+library(readxl)
+Long2018 <- read_excel("Long2018.xlsx")
+crime1 <- read_csv("crime1.csv")
+crime1 <- crime1[crime1$lat != "NA" & crime1$long != "NA", ] #get rid of rows with NA for lat or long
+crime1 <- crime1[complete.cases(crime1[ , 3:5]),]
+crime1 <- subset(crime1, select = c("OFFENSE_CODE_GROUP", "OFFENSE_DESCRIPTION", "YEAR", "lat", "long")) #Drop variables that I don't need
+crime2018 <- filter(crime1, YEAR == 2018) #make data frame for 2018 
+```
+
+## Abstract
+
+This report outlines the attempt made to predict house prices based on crime rates in the surrounding area. In order to capture the influence of different types of crimes, offenses were categorized into one of several categories. Multiple models were made with the purpose of capturing this relationship, though due to the limitations of the data, none sufficiently explained it. 
+
+## Introduction
+The purpose of this work is to predict house price based primarily on crime. While intuition may have a person believe that safer areas may be more expensive, this may not be the case, especially when different types of offenses are considered. For this reason, the type of crime committed will be taken into account. The results of this work may help neighborhoods predict the type of crime they are most vulnerable to, such as burglary or vandalism, and set up precautions accordingly. Furthermore, results contrary to intuition can help disprove stereotypes and improve the reputation of areas that are more affordable. It should be acknowledged that many factors contribute to the price of a house, and area in general, and that crime is only one factor. While studies have been performed to explore the relationship between crime and house prices, even the authors recognize the fluid nature of crime movement and the multiple elements that influence house prices. However, despite this, there has been a connection shown between house prices and crimes, particularly robbery and aggravated assault. One study found that when homicide and robberies decreased in Rio de Janeiro, property values increased 5-10% [1]. The following report will chronicle the effort made to explore the relationship between house price and crime committed in the surrounding area. 
+
+## Method
+The primary data source for this analysis is the Boston crime incidents report [2], in which the Boston Police Department report details of incidents to which they respond. This data set included date, hour, offense code group, offense description, and latitude and longitude for the years 2015-2018. In order to make the data more manageable, all of the unique offense descriptions were observed and classified into more board description of the incident, such as domestic, violent, and non-violent. To find the location of the incident in more interpretable terms, the latitude and longitude for each occurrence was run through the Federal Communications Commission API [3] to determine the census block to which it belongs. In order to create a range of economic situations, the median house values for different neighborhoods and zip codes in Boston was researched on Zillow to select neighborhoods to include in the model. House prices of properties currently on the market were then researched for each area. After selecting appropriate groups, the census block number for the desired locations was determined by examining both Google maps and a map of census blocks [4] for Boston. The crime rate for each area was calculated based on the fact that census blocks, optimally, 4,000 people per block [5]. It should be noted that Boston is a very expensive, and while there is a wide range of house prices, it is not as variable as would be found in other cities. 
+
+In order to explore how different crime rates influence property values, models were run controlling for the total crime rate, the rates of all individual crime types, and only including rates for crimes that studies have indicated are the most influential on house prices. In order to add more information regarding the areas, the percentage of the population that is white [6] [7] [8] [9] [10] [11] [12] [13] was added as a group level predictor. This leaves city as the only random effect. To capture the differences between areas, a mixed effects model was used. Exploratory data analysis shows that there are different rates of crime associated with different property prices, weakly indicating that crime rates and property values are negatively correlated.
+```{r, echo = FALSE}
+ggplot(data = Long2018) +
+  aes(y = Crime_100, x = House_Price) +
+  geom_point(color = "#0c4c8a") +
+  labs(title = "Crime Rate and House Price",
+    y = "Crime Rate, per 100 people",
+    x = "Price, in Thousands") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+Graph of crime rate versus house price. Graph indicates that for the data gathered, higher priced areas generally have lower crime rates. 
+
+However, this trend was not captured in the models. In fact, despite the different inputs, all of the models had nearly identical outputs, with little variation between areas being captured. The same phenomenon occurred when the models were fit linearly. Though the results were marginally better, they still did not indicate anything of substance. 
+
+## Result
+Because the fits of the models were the same within their respective class, it is difficult to determine which one is the most appropriate.  Based on the goal of this work, neither complete pooling nor no-pooling modeling is optimal. The information provided by the analysis would ideally be used to identify areas with low house prices due to crime, and as complete pooling ignores variation between areas, the subject of this work would be pooled away. In contrast, no-pooling modeling would overestimate the variation between areas, skewing the results. Thus, multilevel modeling is the most appropriate. To make use of all of the data available and illustrate differences between areas, a varying intercept model with group level predictors should produce the most accurate results. Because of the variation within cities/neighborhoods that contribute to both the overall crime level and the type of crime that is likely to be committed, the model should include crime rate by type, rather than overall crime rate. The results of this model are shown below:
+
+```{r, echo = FALSE}
+Long2018$log_price <- log(Long2018$Price_Thou)
+M2 <- lmer(log_price ~ Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100 + (1|City), data = Long2018)
+summary(M2)
+#fixef(M2)
+#ranef(M2)  
+M2.res <- resid(M2)
+```
+
+The intercept shows the expected value, on the logarithmic scale, of a house in an area with no crime and a 0% Caucasian population. This hypothetical house is incredibly expensive, and, regardless of the accuracy of this model, is difficult to believe would ever be a reality. The coefficients of the model indicate that an increase in the Caucasian population, domestic violence, crimes under the "other" category, and car related incidents seem to decrease the house price. Although this is mostly contrary to studies, burglaries are listed under "other", which is consistent with research. The random effects of this model are incredibly small, indicating little variation between neighborhoods defined in the model. 
+```{r, echo = FALSE}
+binnedplot(Long2018$log_price, M2.res) 
+```
+Residual binned plot of selected model
+
+The residual plots of this model are the same as all others generated for lmer fit models. It is clear that the model does not fit the data well, and that there is an underlying pattern, possibly indicating that the model type is not suitable.
+
+## Discussion
+As the results of the selected model are dubious, it is difficult to draw meaningful conclusions. If the model is correct, it would indicate that home owners would have a financial incentive to keep their area free of crime, and their property would be a great investment if they lived in an area that became safer over time. This is especially true of domestic crime, which may motivate some people to take a greater interest in the personal lives of their friends and neighbors, as domestic crime often happens behind closed doors. The results of this model also indicate that neighborhoods would be very concerned about their cars and parking violations, as well as miscellaneous crimes listed in the "other" category, including firearm violations, assembly or gathering violations, and burglaries, which is one of the only believable aspects of this model. 
+
+There are several limitations to this model. Although the original crime data included hundreds of thousands of crime points for the entire time span, and tens of thousands for 2018, the prices of current houses for sale was the limiting factor in the size of the final data used for the model. This resulted in groups being very small, making it hard to represent the story fully. Another large limitation of this work is the granular level of data that is available. Property prices in some areas vary a substantial amount. However, it is difficult to focus in on the crimes that happened around a single house for which you know the value, and repeat this for a sufficient number of houses in each area, which would be the best way of capturing the relationship between crime and real estate prices. Because of this limitation, the crime rate for each house within an area is the same. Additionally, crime type was subjectively categorized, influencing the basis of the model. In regards to the nature of crime itself, many crimes go unreported, which can have a huge influence on what researches find. 
+
+The inclusion of several predictors would greatly improve the accuracy of the model. Points of interest include the hour in which the crime took place, as some crimes are more likely to occur when people are typically not at home; the proportion of employed and/or educated population in the area; and the age distribution of the area, as some crimes strongly follow age profiles. For example, teenagers are more likely to commit acts of vandalism than their older counterparts [14].  To factor in gentrification and determine where crime moves because of it, a time series could be created, with the inclusion of the predictors mentioned above.  
+
+## Acknowledgement
+I would like to thank Masanao Yajima for being a patient educator, Haviland Wright for helping me with my code, Andrew Gelman and Jennifer Hill for writing an understandable book on a complicated topic, and Conor and Jackie McPeake for discussing ideas with me. 
+
+## Reference
+[1] Maximino, Martin. "The Impact of Crime on Property Values: Research Roundup." Journalist's Resource, 16 Feb. 2017, journalistsresource.org/studies/economics/real-estate/the-impact-of-crime-on-property-values-research-roundup.
+[2] "Crime Incident Reports (August 2015 - To Date) (Source: New System)." Analyze Boston, data.boston.gov/dataset/crime-incident-reports-august-2015-to-date-source-new-system.
+[3] "Federal Communications Commission." FCC Area API, geo.fcc.gov/api/census/.
+[4] "2010 Census - Census Tract Reference Map - Suffolk County, MA." Census Bureau, 2010. 2.census.gov/geo/maps/dc10map/tract/st25_ma/c25025_suffolk/DC10CT_C25025_001.pdf
+[5] Branch, Geographic Products. "2010 Geographic Terms and Concepts - Census Tract." Census Bureau QuickFacts, United States Census Bureau, 1 Sept. 2012, www.census.gov/geo/reference/gtc/gtc_ct.html.
+[6] "Allston." Wikipedia, Wikimedia Foundation, 23 Nov. 2018, en.wikipedia.org/wiki/Allston.
+[7] "Back Bay, Boston." Wikipedia, Wikimedia Foundation, 5 Dec. 2018, en.wikipedia.org/wiki/Back_Bay,_Boston.
+[8] "Chestnut Hill Demographics and Statistics." Niche, Niche, www.niche.com/places-to-live/n/chestnut-hill-newton-ma/residents/.
+[9] "Fenway-Kenmore." Wikipedia, Wikimedia Foundation, 5 Nov. 2018, en.wikipedia.org/wiki/Fenway%E2%80%93Kenmore.
+[10] "Roxbury, Boston." Wikipedia, Wikimedia Foundation, 3 Dec. 2018, en.wikipedia.org/wiki/Roxbury,_Boston.
+[11] "Dorchester, Boston." Wikipedia, Wikimedia Foundation, 8 Dec. 2018, en.wikipedia.org/wiki/Dorchester,_Boston.
+[12] "East Boston." Wikipedia, Wikimedia Foundation, 1 Dec. 2018, en.wikipedia.org/wiki/East_Boston.
+[13] "Jamaica Plain." Wikipedia, Wikimedia Foundation, 23 Nov. 2018, en.wikipedia.org/wiki/Jamaica_Plain.
+[14] "Who Are the Most Likely Offenders of Graffiti." Western Australia Police, 19 Jan. 2018, www.goodbyegraffiti.wa.gov.au/Schools/Facts-for-Students/Who-are-the-most-likely-offenders-of-graffiti.
+
+
+## Appendix
+```{r, echo = FALSE}
+#Crime Type
+crime2018$Crime_Type <- " "
+for (i in 1:80001){
+  if(crime2018$OFFENSE_CODE_GROUP[i] == "Evading Fare" | crime2018$OFFENSE_CODE_GROUP[i] =="Ballistics"| crime2018$OFFENSE_CODE_GROUP[i] =="Other Burglary"| crime2018$OFFENSE_CODE_GROUP[i] =="Fire Related Reports"| crime2018$OFFENSE_CODE_GROUP[i] =="Commercial Burglary" | crime2018$OFFENSE_CODE_GROUP[i] == "Violations" | crime2018$OFFENSE_CODE_GROUP[i] == "Firearm Discovery" | crime2018$OFFENSE_CODE_GROUP[i] == "Assembly or Gathering Violations" | crime2018$OFFENSE_CODE_GROUP[i] == "Firearm Violations" | crime2018$OFFENSE_CODE_GROUP[i] == "Disorderly Conduct" | crime2018$OFFENSE_CODE_GROUP[i] == "Landlord/Tenant Disputes" | crime2018$OFFENSE_CODE_GROUP[i] == "Aircraft" | crime2018$OFFENSE_CODE_GROUP[i] == "License Violation" | crime2018$OFFENSE_CODE_GROUP[i] == "Explosives") {
+    crime2018$Crime_Type[i] = "Other"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Missing Person Reported" | crime2018$OFFENSE_CODE_GROUP[i] == "Missing Person Located"){
+    crime2018$Crime_Type[i] = "Missing Person"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Towed" | crime2018$OFFENSE_CODE_GROUP[i] == "Auto Theft Recovery" | crime2018$OFFENSE_CODE_GROUP[i] == "License Plate Related Incidents" | crime2018$OFFENSE_CODE_GROUP[i] == "Auto Theft"){
+    crime2018$Crime_Type[i] = "Auto Vehicle"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Verbal Disputes" | crime2018$OFFENSE_CODE_GROUP[i] == "Harassment" | crime2018$OFFENSE_CODE_GROUP[i] == "Liquor Violation" | crime2018$OFFENSE_CODE_GROUP[i] ==  "Operating Under the Influence" | crime2018$OFFENSE_CODE_GROUP[i] == "Phone Call Complaints" | crime2018$OFFENSE_CODE_GROUP[i] == "Prostitution" | crime2018$OFFENSE_CODE_GROUP[i] == "Disorderly Conduct" ){
+    crime2018$Crime_Type[i] = "Domestic"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Drug Violation"){
+    crime2018$Crime_Type[i] = "Drugs"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Medical Assitance"){
+    crime2018$Crime_Type[i] = "Medical"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Vandalism" | crime2018$OFFENSE_CODE_GROUP[i] == "Property Related Damage" | crime2018$OFFENSE_CODE_GROUP[i] == "Burglary- No Property Taken" | crime2018$OFFENSE_CODE_GROUP[i] == "Larceny" | crime2018$OFFENSE_CODE_GROUP[i] == "Larceny From Motor Vehicle" | crime2018$OFFENSE_CODE_GROUP[i] == "Residental Burglary" ){
+    crime2018$Crime_Type[i] = "Nonviolent"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Aggravated Assault" | crime2018$OFFENSE_CODE_GROUP[i] == "Arson" | crime2018$OFFENSE_CODE_GROUP[i] == "Offenses Against Child/Family" | crime2018$OFFENSE_CODE_GROUP[i] == "Criminal Harassment" | crime2018$OFFENSE_CODE_GROUP[i] == "Biological Threat" | crime2018$OFFENSE_CODE_GROUP[i] == "HUMAN TRAFFICKING" | crime2018$OFFENSE_CODE_GROUP[i] == "Restraining Order Violation" | crime2018$OFFENSE_CODE_GROUP[i] == "Robbery" | crime2018$OFFENSE_CODE_GROUP[i] == "Home Invastion" | crime2018$OFFENSE_CODE_GROUP[i] == "Homicide" | crime2018$OFFENSE_CODE_GROUP[i] == "Manslaughter" | crime2018$OFFENSE_CODE_GROUP[i] == "HUMAN TRAFFICKING- INVOLUNRARY SERVITUDE") {
+    crime2018$Crime_Type [i] = "Violent"
+  }
+    else if (crime2018$OFFENSE_CODE_GROUP[i] == "Confidence Games" | crime2018$OFFENSE_CODE_GROUP[i] == "Gambling" | crime2018$OFFENSE_CODE_GROUP[i] == "Fraud" | crime2018$OFFENSE_CODE_GROUP[i] == "Embezzlement" | crime2018$OFFENSE_CODE_GROUP[i] == "Counterfiting" ){
+      crime2018$Crime_Type[i] = "Financial"
+    }
+  else if(crime2018$OFFENSE_CODE_GROUP[i] == "Other" & crime2018$OFFENSE_DESCRIPTION[i] == "THREATS TO DO BODILY HARM" | crime2018$OFFENSE_DESCRIPTION[i] == "INTIMIDATING WITNESS" | crime2018$OFFENSE_DESCRIPTION[i] == "KIDNAPPING/CUSTODIAL KIDNAPPING" | crime2018$OFFENSE_DESCRIPTION[i] == "ANIMAL ABUSE" | crime2018$OFFENSE_DESCRIPTION[i] == "ABDUCTION - INTICING" | crime2018$OFFENSE_DESCRIPTION[i] == "KIDNAPPING - ENTICING OR ATTEMPTED" | crime2018$OFFENSE_DESCRIPTION[i] == "CUSTODIAL KIDNAPPING"){
+    crime2018$Crime_Type[i] = "Violent"
+  }
+  else if(crime2018$OFFENSE_CODE_GROUP[i] == "Other" & crime2018$OFFENSE_DESCRIPTION[i] == "TRESPASSING"){
+    crime2018$Crime_Type[i] = "Nonviolent"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Other" & crime2018$OFFENSE_DESCRIPTION[i] == "VAL - VIOLATION OF AUTO LAW - OTHER" | crime2018$OFFENSE_DESCRIPTION[i] == "OTHER OFFENSE" | crime2018$OFFENSE_DESCRIPTION[i] == "DANGEROUS OR HAZARDOUS CONDITION" | crime2018$OFFENSE_DESCRIPTION[i] == "OBSCENE MATERIALS - PORNOGRAPHY" | crime2018$OFFENSE_DESCRIPTION[i] == "POSSESSION OF BURGLARIOUS TOOLS" | crime2018$OFFENSE_DESCRIPTION[i] == "VIOLATION - CITY ORDINANCE" | crime2018$OFFENSE_DESCRIPTION[i] == "WEAPON - OTHER - OTHER VIOLATION" | crime2018$OFFENSE_DESCRIPTION[i] == "PROPERTY - CONCEALING LEASED" | crime2018$OFFENSE_DESCRIPTION[i] == "VIOLATION - CITY ORDINANCE CONSTRUCTION PERMIT" | crime2018$OFFENSE_DESCRIPTION[i] =="VIOLATION - HAWKER AND PEDDLER"){
+    crime2018$Crime_Type[i] = "Other"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Other" & crime2018$OFFENSE_DESCRIPTION[i] == "REPORT AFFECTING OTHER DEPTS." | crime2018$OFFENSE_DESCRIPTION[i] == "INVESTIGATION FOR ANOTHER AGENCY"){
+    crime2018$Crime_Type[i] = "Police Work"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Other" & crime2018$OFFENSE_DESCRIPTION[i] == "EXTORTION OR BLACKMAIL"){
+     crime2018$Crime_Type[i] = "Domestic"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Simple Assault" & crime2018$OFFENSE_DESCRIPTION[i] == "ASSAULT SIMPLE - BATTERY" | crime2018$OFFENSE_DESCRIPTION[i] == "A&B ON POLICE OFFICER" | crime2018$OFFENSE_DESCRIPTION[i] == "ASSAULT & BATTERY"){
+    crime2018$Crime_Type[i] = "Violent"
+  }
+  else if (crime2018$OFFENSE_CODE_GROUP[i] == "Simple Assault" & crime2018$OFFENSE_DESCRIPTION[i] == "ASSAULT - SIMPLE"){
+    crime2018$Crime_Type[i] = "Nonviolent"
+  }
+  else{
+    crime2018$Crime_Type[i] = "Police Work"
+  }
+}
+
+```
+
+
+```{r, echo=FALSE}
+# Select Crime Type
+#Selected everything but Police Work
+Violent2018 <- filter(crime2018, Crime_Type == "Violent" | Crime_Type == "Domestic" | Crime_Type == "Drugs" | Crime_Type == "Missing Person" | Crime_Type == "Other" | Crime_Type == "Auto Vehicle" | Crime_Type == "Nonviolent" | Crime_Type == "Medical" | Crime_Type == "Financial")
+```
+
+```{r Census Block, echo=FALSE}
+# Link Longitude and Latitude to Census Block Number
+
+result18 <- list()
+tract18 <- list()
+try18 <- list()
+Violent2018$block <- 0
+
+lat18 <- as.numeric(Violent2018$lat)
+lon18 <- as.numeric(Violent2018$long)
+for(i in 1:9733){
+
+api18 <- paste0("https://geo.fcc.gov/api/census/block/find?latitude=",lat18[i],"&longitude=",lon18[i],"&showall=true&format=xml")
+#print(api1)
+
+## call the api and get the result
+result18[[i]] <- GET(api18, content_type(".xml"))
+#print(result)
+
+## convert the hex to text
+xr18 <- content(result18[[i]], "text")
+
+## parse the xml
+xr.18 <- xmlParse(xr18[[1]]) 
+
+
+## convert the xml into a list
+xr.list18 <- xmlToList(node = xr.18)
+
+
+## the FIPS in the "Block" list item
+fips18 <- xr.list18$Block
+
+
+## you can have the fips as numberic or character
+as.character(fips18)
+
+# sort out the parts of the block ID
+fips18.1 <- fips18[1] 
+as.data.frame(fips18.1)
+splintered18 <- t(sapply(fips18.1, function(x) substring(x, first = c(1,6,12), last = c(5,11,15)))) 
+
+cbind(splintered18) -> bound18
+
+bound18[[2]] -> tract18 #The second item is the census tract number
+as.integer(tract18)
+try18 <- gsub("(?<![0-9])0+", "", tract18, perl = TRUE)
+try18 <- as.numeric(as.character(try18))
+
+try18 <- try18/100
+try18 -> Violent2018$block[i]
+}
+```
+
+
+```{r select blocks, echo = FALSE}
+selectedv2018 <- filter(Violent2018, block == 818 | block == 907 | block == 612| block == 1207 |  block == 503 | block == 108.02 | block == 108.01 | block == 107.02 | block == 817 | block == 8.02 | block == 8.03 | block == 601.01 | block == 602 | block == 605.01| block == 4.02 | block == 4.01 | block == 103)
+```
+
+```{r name blocks, echo = FALSE}
+selectedv2018$city = " "
+
+selectedv2018$city <- ifelse((selectedv2018$block == 818 | selectedv2018$block == 817), "Roxbury", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 108.02 | selectedv2018$block == 108.01 | selectedv2018$block == 107.02), "Back Bay", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 907), "Dorchester", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 612), "Boston612", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 1207), "Jamaica Plain", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 103), "Boston103", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 503), "Boston503", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 601.01 | selectedv2018$block == 602 | selectedv2018$block == 605.01), "East Boston", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 8.02 | selectedv2018$block == 8.03), "Allston", selectedv2018$city)
+
+selectedv2018$city <- ifelse((selectedv2018$block == 4.01 | selectedv2018$block == 4.02), "Chestnut Hill", selectedv2018$city)
+
+```
+
+```{r med house value, echo = FALSE}
+library(readxl)
+Zip_Code <- read_excel("Zip Code.xlsx")
+
+selectedv2018$Med_House_Value_18 <- 0
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Roxbury", 449050, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Dorchester", 506600, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Boston612", 686800, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Jamaica Plain", 616900, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Boston103", 689700, selectedv2018$Med_House_Value_18) 
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Boston503", 479700, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "East Boston", 686800, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Back Bay", 1135400, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Allston", 493200, selectedv2018$Med_House_Value_18)
+
+selectedv2018$Med_House_Value_18 <- ifelse(selectedv2018$city == "Chestnut Hill", 429700, selectedv2018$Med_House_Value_18)
+
+```
+
+```{r incidents per city, echo = FALSE}
+library(lme4)
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Violent") #17
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Nonviolent") #18
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Financial") #9
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Domestic") #6
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Other") #11
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Drugs") #1
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Missing Person") #2
+# sum(selectedv2018$city == "Allston" & selectedv2018$Crime_Type == "Auto Vehicle") #11
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Violent") #50
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Nonviolent") #47
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Financial") #6
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Domestic") #30
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Other") #20
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Drugs") #6
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Missing Person") #8
+# sum(selectedv2018$city == "Roxbury" & selectedv2018$Crime_Type == "Auto Vehicle") #7
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Violent") #21
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Nonviolent") #89
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Financial") #13
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Domestic") #6
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Other") #8
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Drugs") #0
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Missing Person") #0
+# sum(selectedv2018$city == "Back Bay" & selectedv2018$Crime_Type == "Auto Vehicle") #19
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Violent") #14
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Nonviolent") #40
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Financial") #7
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Domestic") #3
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Other") #11
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Drugs") #0
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Missing Person") #2
+# sum(selectedv2018$city == "East Boston" & selectedv2018$Crime_Type == "Auto Vehicle") #18
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Violent") #4
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Nonviolent") #6
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Financial") #2
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Domestic") #5
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Other") #4
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Drugs") #4
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Missing Person") #2
+# sum(selectedv2018$city == "Boston503" & selectedv2018$Crime_Type == "Auto Vehicle") #7
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Violent") #0
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Nonviolent") #5
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Financial") #0
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Domestic") #2
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Other") #1
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Drugs") #0
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Missing Person") #0
+# sum(selectedv2018$city == "Boston103" & selectedv2018$Crime_Type == "Auto Vehicle") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Violent") #4
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Nonviolent") #3
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Financial") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Domestic") #1
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Other") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Drugs") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Missing Person") #0
+# sum(selectedv2018$city == "Jamaica Plain" & selectedv2018$Crime_Type == "Auto Vehicle") #6
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Violent") #5
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Nonviolent") #30
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Financial") #3
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Domestic") #4
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Other") #3
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Drugs") #23
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Missing Person") #0
+# sum(selectedv2018$city == "Boston612" & selectedv2018$Crime_Type == "Auto Vehicle") #16
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Violent") #21
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Nonviolent") #59
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Financial") #6
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Domestic") #8
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Other") #11
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Drugs") #2
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Missing Person") #0
+# sum(selectedv2018$city == "Dorchester" & selectedv2018$Crime_Type == "Auto Vehicle") #9
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Violent") #7
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Nonviolent") #23
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Financial") #4
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Domestic") #4
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Other") #6
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Medical") #0
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Drugs") #0
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Missing Person") #4
+# sum(selectedv2018$city == "Chestnut Hill" & selectedv2018$Crime_Type == "Auto Vehicle") #7
+```
+
+#Plots 
+```{r plots, echo = FALSE}
+ggplot(data = selectedv2018) +
+  aes(x = city, fill = Crime_Type) +
+  geom_bar() +
+  labs(title = "Crime by City 2018",
+    x = "City",
+    y = "Frequency") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5)) 
+```
+The number of crimes for each city included in the data. Filled in for crime type. 
+
+```{r, echo = FALSE}
+ggplot(data = selectedv2018) +
+  aes(x = Crime_Type, fill = city) +
+  geom_bar() +
+  labs(title = "Crime Type by City", 
+       y = "Count",
+       x = "Crime Type")+
+  theme_minimal()+
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+Count of crime type, filled in for each city included in the data. 
+
+ 
+
+```{r, echo = FALSE}
+#Crime rate by city
+ggplot(data = Long2018) +
+  aes(x = City, y = Crime_100) +
+  geom_boxplot(fill = "#0c4c8a") +
+  labs(title = "Crime Rate by City, 2018",
+    x = "City",
+    y = "Total Crime Rate per 100 People") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+Overall crime rate for each city. As the crime rate is flat for each area, there is only one data point for each group.  
+```{r, echo = FALSE}
+#House Prices by City
+ggplot(data = Long2018) +
+  aes(x = City, y = Price_Thou) +
+  geom_boxplot(fill = "#0c4c8a") +
+  labs(title = "House Prices by City",
+    x = "City",
+    y = "Price, in Thousandds") +
+  theme_minimal() +
+  theme(axis.text.x = element_text(angle = 90, hjust = 1, vjust = 0.5))
+```
+House prices for each city included in the data.
+
+
+
+#Complete pooling models
+```{r complete pooling, echo = FALSE}
+library(lme4)
+library(arm)
+Long2018$log_price <- log(Long2018$Price_Thou) #log transformed price in thousands of dollars
+
+#Ignoring variation between cities
+comppool18 <- lm(log_price ~ Crime_100 + Percent_White, data = Long2018)
+comppool18
+comppool18.res <- resid(comppool18)
+binnedplot(Long2018$log_price, comppool18.res) #Horrible
+
+comppool100 <- lm(log_price ~ Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100, data = Long2018)
+comppool100.res <- resid(comppool100)
+binnedplot(Long2018$log_price, comppool100.res) #Even worse
+```
+
+
+
+```{r no pooling, echo = FALSE}
+#no pooling models
+nopool18 <- lm(log_price ~ Crime_100 + Percent_White + factor(City) - 1, data = Long2018)
+nopool18
+nopool18.res <- resid(nopool18)
+binnedplot(Long2018$log_price, nopool18.res) #bad, same as complete pooling
+
+nopool100 <- lm(log_price ~  Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100  + factor(City) - 1, data = Long2018)
+nopool100.res <- resid(nopool100)
+binnedplot(Long2018$log_price, nopool100.res) #same 
+
+nopool100crime <- lm(log_price ~  Percent_White + Vio_100 + Nvio_100 + MP_100 + factor(City) - 1, data = Long2018)
+nopool100crime.res <- resid(nopool100)
+binnedplot(Long2018$log_price, nopool100crime.res) #same as with all types of crime included
+```
+
+```{r, echo = FALSE}
+#Multilevel models
+
+#Varying intercept no predictors 
+varinop18 <- lmer(log_price ~ 1 + (1|City), data = Long2018) 
+varinop18.res <- resid(varinop18)
+binnedplot(Long2018$log_price, varinop18.res) #Bad
+
+#Varying intercept with indi level predictors, just for crude crime rate
+M1 <- lmer(log_price ~ Crime_100 + Percent_White + (1|City), data = Long2018) 
+fixef(M1)
+ranef(M1) #Shows some random effects
+M1.res <- resid(M1)
+binnedplot(Long2018$log_price, M1.res) #Same
+
+#Varying intercept with individual level predectors, for each crime rate
+M2 <- lmer(log_price ~ Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100 + (1|City), data = Long2018)
+summary(M2)
+coef(M2)
+fixef(M2)
+ranef(M2) #Shows hardly any random effects 
+M2.res <- resid(M2)
+binnedplot(Long2018$log_price, M2.res) #same
+
+#Varying intercept with crimes most associated with property values
+M3 <- lmer(log_price ~ Percent_White + Vio_100 + MP_100 + Nvio_100 + (1|City), data = Long2018)
+fixef(M3)
+ranef(M3)
+M3.res <- resid(M3)
+binnedplot(Long2018$log_price, M3.res) #Looks exactly the same
+
+```
+
+
+# Try another type of transformation
+```{r other transforms, echo= FALSE}
+Long2018$log.crime <- log(Long2018$Crime_100)
+loglogM5lin <- lm(log_price ~ log.crime + Percent_White, data = Long2018)
+loglogM5lin.res <- resid(loglogM5lin)
+binnedplot(Long2018$log_price, loglogM5lin.res)
+#Taking log of crime didn't do anything
+
+Long2018$sqrt.crime <- sqrt(Long2018$Crime_100)
+logsqrtM5lin <- lm(log_price ~ sqrt.crime + Percent_White, data = Long2018)
+logsqrtM5lin.res <- resid(loglogM5lin)
+binnedplot(Long2018$log_price, logsqrtM5lin.res)
+#taking sqrt of crime didn't doo anything
+```
+
+```{r varying slope, echo = FALSE}
+M7 <- lmer(log_price ~ Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100 + (Vio_100 + 1|City), data = Long2018)
+
+coef(M7)
+```
+
+```{r, echo = FALSE}
+M8 <- lmer(log_price ~ Percent_White + Vio_100 + Nvio_100 + Fin_100 + Dom_100 + Oth_100 + Drug_100 + MP_100 + Car_100 + (1|City), data = Long2018)
+coef(M8)
+
+#No difference between varying slope and vary intercept + slope
+```
