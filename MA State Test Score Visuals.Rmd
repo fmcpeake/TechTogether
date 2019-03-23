@@ -1,0 +1,123 @@
+---
+title: "Boston Schools TechTogether MA Test Scores"
+author: "Fionnuala McPeake"
+date: "March 23, 2019"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(readxl)
+library(httr)
+library(tidyverse)
+library(XML)
+library(lme4)
+library(arm)
+library(readxl)
+library(esquisse)
+mcas <- read_excel("mcas.xlsx")
+NextGenMCAS <- read_excel("NextGenMCAS.xlsx")
+```
+
+```{r}
+# schoolgrades <- schoolgrades %>%
+#   filter(DISTRICT_NAME == "Boston")
+# summary(schoolgrades$School_Total)
+# schoolgrades[schoolgrades==0] <- NA
+# schoolgrades$School_Avg <- 0
+# for(i in 1:117){
+#   schoolgrades$School_Avg[i] = colMeans(schoolgrades[,c(7:20)], na.rm=TRUE)[i]
+# } 
+# schoolgrades$rating <- "blah"
+# schoolgrades$rating <- ifelse(schoolgrades$School_Total <= 229.0, "lowest", schoolgrades$rating)
+# schoolgrades$rating <- ifelse(schoolgrades$School_Total >229.0 & schoolgrades$School_Total <= 371.0, "med-low", schoolgrades$rating)
+# schoolgrades$rating <- ifelse(schoolgrades$School_Total > 371.0 & schoolgrades$School_Total <= 549.0, "med-high", schoolgrades$rating)
+# schoolgrades$rating <- ifelse(schoolgrades$School_Total > 549.0, "high", schoolgrades$rating)
+```
+
+## School size
+```{r pressure, echo=FALSE}
+# ggplot(data = schoolgrades, aes(x = SCHOOL_NAME, y = School_Total)) +
+#   geom_bar(stat = "identity")
+```
+
+## Cleaning tech and science scores
+```{r}
+mcas$District <- "Blah"
+mcas$District <- substr(mcas$`School Name`, start = 1, stop = 6)
+
+mcas <- mcas %>%
+  filter(District == "Boston")
+mcas <- mcas[c(1:100), ]
+
+for(i in 1:100){
+mcas$`School Name`[i] <- str_sub(mcas$`School Name`, 10)[i]
+}
+
+mcas$Boston <- ifelse(mcas$District == "Boston", "Boston", "Not Boston")
+mcas$`CPI` <- as.double(mcas$`CPI`)
+```
+
+## Visualizing tech and science scores
+```{r}
+ggplot(data = mcas, aes(x = Boston, y = CPI)) +
+  geom_boxplot(outlier.colour = "blue", outlier.shape = 1, colour = "blue") +
+  ggtitle("MCAS Tech and Science CPI Score ") +
+  xlab("Location") +
+  ylab("Composit Performance Index")
+```
+
+## Cleaning Next Gen MCAS
+```{r}
+NextGenMCAS$`Avg. Scaled Score` <- as.double(NextGenMCAS$`Avg. Scaled Score`)
+
+NextGenMCAS$District <- "Blah"
+NextGenMCAS$District <- substr(NextGenMCAS$`School Name`, start = 1, stop = 6)
+NextGenMCASB <- NextGenMCAS %>%
+  filter(District == "Boston")
+
+for(i in 1:180){
+NextGenMCASB$`School Name`[i] <- str_sub(NextGenMCASB$`School Name`, 10)[i]
+} 
+
+NextGenMCASBmath <- NextGenMCASB %>%
+  filter(Subject == "MATH")
+
+NextGenMCASBELA <- NextGenMCASB %>%
+  filter(Subject == "ELA")
+
+NextGenMCASnb <- NextGenMCAS %>%
+  filter(District != "Boston")
+
+NextGENMCASnbmath <- NextGenMCASnb %>%
+  filter(Subject == "MATH")
+
+NextGenMCASnbela <- NextGenMCASnb %>%
+  filter(Subject == "ELA")
+
+NextGenMCAS$Boston <- ifelse(NextGenMCAS$District == "Boston", "Boston", "Not Boston")
+NextGenMCASmath <- NextGenMCAS %>%
+  filter(Subject == "MATH")
+
+NextGenMCASELA <- NextGenMCAS %>%
+  filter(Subject == "ELA")
+```
+
+## Visualizing Test Scores
+```{r}
+ggplot(data = NextGenMCASELA, aes(x = Boston, y = `Avg. Scaled Score`)) +
+  geom_boxplot(outlier.colour = "blue", outlier.shape = 1, colour = "blue") +
+  ggtitle("MCAS Next Generation Average ELA Scores") +
+  xlab("Location")
+
+ggplot(data = NextGenMCASmath, aes(x = Boston, y = `Avg. Scaled Score`)) +
+  geom_boxplot(outlier.colour = "blue", outlier.shape = 1, colour = "blue") +
+  ggtitle("MCAS Next Generation Average Math Scores") +
+  xlab("Location")
+```
+
+```{r}
+
+```
