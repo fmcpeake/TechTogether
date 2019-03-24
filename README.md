@@ -6,3 +6,6 @@ would like to investigate external factors, specifically crime rates in the surr
 performances. The scope of our project will include dropout rates and standardized test scores for each public school in Boston, and 
 comparison to rates of various types of crimes in different neighborhoods. These findings could give insight into the relationship between 
 crime rates, dropout rates, and MCAS scores.
+
+#File Descriptions
+MA State Test Score Visuals - Shows graphs of various test results, distinguishing between inside and outside of Boston. 
