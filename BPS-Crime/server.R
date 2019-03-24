@@ -29,14 +29,9 @@ shinyServer(function(input, output) {
     clicked_mapview$clickedMarker <- input$mapview_marker_click
   })
   
-  
   selected_coordinates= reactive(({
     c(clicked_mapview$clickedMarker$lng,clicked_mapview$clickedMarker$lat)
   }))
-  
-  output$fish=renderTable({
-    selected_data()
-  })
   
   selected_data <- reactive(({
     if(is.null(clicked_mapview$clickedMarker))

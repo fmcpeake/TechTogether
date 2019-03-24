@@ -11,17 +11,14 @@ shinyUI(fluidPage(
     ),
     
     column(width=6,align="center",
-           conditionalPanel(
+           #conditionalPanel(
              
-             condition = "output.condition1 == 0",
-             br(),
-             tags$h4("About",style='color:blue'),
-             tags$p('...',span(tags$a(href="https://openweathermap.org/forecast16", "OpenWeatherMap.")) ,style="text-align:left;color:black;font-size:140%")
-             ),
-           
-           
-           conditionalPanel(   
-             condition = "output.condition1 == 1",
+             # condition = "output.condition1 == 0",
+             # br(),
+             # tags$h4("About",style='color:blue'),
+             # tags$p('...',span(tags$a(href="https://openweathermap.org/forecast16", "OpenWeatherMap.")) ,style="text-align:left;color:black;font-size:140%")
+             # ),
+             # 
              tabsetPanel(
                tabPanel(tags$em("Academic Performance",style="font-size:120%"),
                         tags$hr(style="border-color: #ffc266;"),
@@ -39,4 +36,3 @@ shinyUI(fluidPage(
                         
                         ))
              )))
-)
