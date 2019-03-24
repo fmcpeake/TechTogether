@@ -7,8 +7,7 @@ performances. The scope of our project will include dropout rates and standardiz
 comparison to rates of various types of crimes in different neighborhoods. These findings could give insight into the relationship between 
 crime rates, dropout rates, and MCAS scores.
 
-# File Descriptions
-MA State Test Score Visuals - Shows graphs of various test results, distinguishing between inside and outside of Boston. 
+# File Descriptions 
 
 ## Data
 
@@ -32,3 +31,5 @@ MA State Test Score Visuals - Shows graphs of various test results, distinguishi
 ## Visualization (R Shiny APP)
 
 Folder "BPS-Crime"
+
+MA State Test Score Visuals - Shows graphs of various test results, distinguishing between inside and outside of Boston. 
