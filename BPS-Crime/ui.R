@@ -24,15 +24,14 @@ shinyUI(fluidPage(
                         tags$hr(style="border-color: #ffc266;"),
                         plotlyOutput("school_info")
                           
-                        )),
-               
+                        ),
                tabPanel(tags$em("Crime Around Schools",style="font-size:120%"),
                         tags$hr(style="border-color:  #d27979;"),
                         plotlyOutput("crime_around_schools")),
                
                tabPanel(tags$em("Science MCAS and Crime",style="font-size:120%"),
                         tags$hr(style="border-color:  #d27979;"),
-                        plotlyOutput("science_and_crime")
-                        
-                        ))
-             )))
+                        plotlyOutput("science_and_crime"))
+                        )
+             ))
+))

@@ -75,20 +75,18 @@ shinyServer(function(input, output) {
     if(is.null(sch))
       return(NULL)
     
-    plot_ly(finaldata, x = ~totalcrime, y = ~Science, 
+    plot_ly(finaldata, x = ~totalcrime, y = ~Science, mode = "markers", type = "scatter",
             marker = list(size = 10,
-            color = 'rgba(255, 182, 193, .9)',
-            line = list(color = 'rgba(152, 0, 0, .8)',
-            width = 2))) %>%
+            color = 'rgba(145,191,219, .9)',
+            width = 2)) %>%
+      add_trace(x = sch$totalcrime, y = sch$Science, mode = "markers",
+                name = sch$school_name_2,
+                marker = list(color='rgba(252,141,89, .8)')) %>%
       layout(title = 'Science Score and Crime',
+             showlegend = F,
              yaxis = list(zeroline = FALSE),
-             xaxis = list(zeroline = FALSE))
-      
+             xaxis = list(zeroline = FALSE, title = "Total Crime"))
   })
-  
-  
-
-  
   
   condition1<-reactive({
     if(is.null(selected_data())){
