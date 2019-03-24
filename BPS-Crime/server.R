@@ -1,10 +1,8 @@
 library(shiny)
 library(sp)
-library(sf)
 library(mapview)
 library(plotly)
 library(png)
-library(stringi)
 
 load("finaldata.RData")
 load("crimedata.RData")
@@ -82,11 +80,11 @@ shinyServer(function(input, output) {
     
     plot_ly(finaldata, x = ~totalcrime, y = ~Science, mode = "markers", type = "scatter",
             marker = list(size = 10,
-            color = 'rgba(145,191,219, .9)',
-            width = 2)) %>%
+                          color='rgba(153,204,255, .8)',
+                          width = 2)) %>%
       add_trace(x = sch$totalcrime, y = sch$Science, mode = "markers",
                 name = sch$school_name_2,
-                marker = list(color='rgba(252,141,89, .8)')) %>%
+                marker = list(color='rgba(255,153,51, .8)')) %>%
       layout(title = 'Science Score and Crime',
              showlegend = F,
              yaxis = list(zeroline = FALSE),
