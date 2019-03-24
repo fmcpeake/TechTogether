@@ -1,4 +1,4 @@
-# TechTogether
+# Boston Schools and Crime Rates
 Some Boston public schools have more underperforming students and dropout incidents than others. These outcomes can be perceived to be 
 caused by factors such as physical ability, cognitive ability, motivation, family background, and race. However, there is an increasing 
 number of articles indicating forced drop outs leading to increased crime rate. In order to gain understanding based on evidence, we 
