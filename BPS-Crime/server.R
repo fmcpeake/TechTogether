@@ -9,16 +9,16 @@ library(stringi)
 load("finaldata.Rdata")
 
 shinyServer(function(input, output) {
-  
-  pop <- finaldata %>%
+  school <- finaldata
+  pop <- school %>%
     mutate('School Size' = School_Total,
            'School Name' = school_name_2,
            Address = ADDRESS) %>%
     select('School Name', Address, 'School Size')
   
-  coordinates(finaldata) <- ~ X + Y
-  proj4string(finaldata) <- "+init=epsg:4326"
-  mp <- mapview(finaldata, zcol="SCH_TYPE", legend=TRUE, cex=8,
+  coordinates(school) <- ~ X + Y
+  proj4string(school) <- "+init=epsg:4326"
+  mp <- mapview(school, zcol="SCH_TYPE", legend=TRUE, cex=8,
            popup=popupTable(pop)) 
   
   output$mapview <- renderMapview(mp) 
