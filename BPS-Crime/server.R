@@ -6,7 +6,8 @@ library(plotly)
 library(png)
 library(stringi)
 
-load("finaldata.Rdata")
+load("finaldata.RData")
+load("crimedata.RData")
 
 shinyServer(function(input, output) {
   school <- finaldata
@@ -18,8 +19,13 @@ shinyServer(function(input, output) {
   
   coordinates(school) <- ~ X + Y
   proj4string(school) <- "+init=epsg:4326"
+  
+  coordinates(crime_4group) <- ~ long + lat
+  proj4string(crime_4group) <- "+init=epsg:4326"
+  
   mp <- mapview(school, zcol="SCH_TYPE", legend=TRUE, cex=8,
-           popup=popupTable(pop)) 
+           popup=popupTable(pop)) +
+    mapview(crime_4group, zcol = "Crime_Type", legend = F, cex = 1, lwd = 0)
   
   output$mapview <- renderMapview(mp) 
   

@@ -5,7 +5,7 @@ lat18 <- as.numeric(crime$lat)
 lon18 <- as.numeric(crime$long)
 l <- nrow(crime)
 result <- list()
-for(i in 13656:l){
+for(i in 1:l){
   api18 <- paste0("https://geo.fcc.gov/api/census/block/find?latitude=",lat18[i],"&longitude=",lon18[i],"&showall=true&format=xml")
   result[[i]] <- GET(api18, content_type(".xml"))
   xr18 <- content(result[[i]], "text")
@@ -146,3 +146,8 @@ colnames(finaldata)[c(13:16)] <- c("Dropout", "Science", "Math", "ELA")
 finaldata$Math <- round(finaldata$Math * 100/560, 1)
 finaldata$ELA <- round(finaldata$ELA * 100/560, 1)
 
+#crimedata
+crime_4group <- crime[crime$Crime_Type %in% c("Domestic", "Drugs", "Missing Person", "Violent"), ]
+crime_4group <- crime_4group[crime_4group$lat > 0,]
+crime_4group <- crime_4group[ ,c(1:4,6,5,7)]
+save(file = "BPS-Crime/crimedata.RData", crime_4group)
