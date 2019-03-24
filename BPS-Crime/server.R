@@ -30,7 +30,7 @@ shinyServer(function(input, output) {
   })
   
   selected_coordinates= reactive(({
-    c(clicked_mapview$clickedMarker$lng,clicked_mapview$clickedMarker$lat)
+    c(clicked_mapview$clickedMarker$lng, clicked_mapview$clickedMarker$lat)
   }))
   
   selected_data <- reactive(({
@@ -44,106 +44,51 @@ shinyServer(function(input, output) {
     sch=selected_data()
     if(is.null(sch))
       return(NULL)
+    
     plot_ly() %>%
-      add_bars(y = sch$Science, name = "MCAS Science Score") %>%
-      add_bars(y = sch$Math, name = "Standardized MCAS Math Score")%>%
-      add_bars(y = sch$ELA, name = "Standardized MCAS ELA Score")%>%
-      layout(title = '',
-             legend = list(orientation = 'h'),
+      add_bars(x = "Science", y = sch$Science, name = "MCAS Science Score", width = .3) %>%
+      add_bars(x = "Math", y = sch$Math, name = "Standardized MCAS Math Score", width = .3)%>%
+      add_bars(x = "English", y = sch$ELA, name = "Standardized MCAS ELA Score", width = .3)%>%
+      layout(title = 'Standardized MCAS Scores',
+             showlegend = F,
+             xaxis = list(title = ""),
+             yaxis = list(range = c(0,100)))
+  })
+  
+  output$crime_around_schools=renderPlotly({
+    sch=selected_data()
+    if(is.null(sch))
+      return(NULL)
+    
+    plot_ly() %>%
+      add_bars(x = "Domestic", y = sch$Domestic, width = .5) %>%
+      add_bars(x = "Drugs", y = sch$Drugs, width = .5)%>%
+      add_bars(x = "Missing Person", y = sch$`Missing Person`, width = .5)%>%
+      add_bars(x = "Violent", y = sch$Violent, width = .5)%>%
+      layout(title = 'Number of Crimes',
+             showlegend = F,
              xaxis = list(title = ""))
   })
   
-  output$max_min_temperature_plotly_3days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
+  output$science_and_crime=renderPlotly({
+    sch=selected_data()
+    if(is.null(sch))
       return(NULL)
     
-    temp=temp[1:3,]
-    plot_ly() %>%
-      add_lines(x = temp$date, y = temp$max_temperature, name = "Maximum Temperature") %>%
-      add_lines(x = temp$date, y = temp$min_temperature, name = "Minimum Temperature")%>%
-      add_lines(x = temp$date, y = temp$day_temperature, name = "Day Temperature") %>%
-      add_lines(x = temp$date, y = temp$night_temperature, name = "Night Temperature") %>%
-      add_lines(x = temp$date, y = temp$eve_temperature, name = "Evening Temperature") %>%
-      add_lines(x = temp$date, y = temp$morn_temperature, name = "Morning Temperature") %>%
-      layout(title = '',
-             legend = list(orientation = 'h'),
-             xaxis = list(title = ""))
-  })
-  
-  output$max_min_temperature_plotly_5days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
-      return(NULL)
-    temp=temp[1:5,]
-    plot_ly() %>%
-      add_lines(x = temp$date, y = temp$max_temperature, name = "Maximum Temperature") %>%
-      add_lines(x = temp$date, y = temp$min_temperature, name = "Minimum Temperature")%>%
-      add_lines(x = temp$date, y = temp$day_temperature, name = "Day Temperature") %>%
-      add_lines(x = temp$date, y = temp$night_temperature, name = "Night Temperature") %>%
-      add_lines(x = temp$date, y = temp$eve_temperature, name = "Evening Temperature") %>%
-      add_lines(x = temp$date, y = temp$morn_temperature, name = "Morning Temperature") %>%
-      layout(title = '',
-             legend = list(orientation = 'h'),
-             xaxis = list(title = ""))  
+    plot_ly(finaldata, x = ~totalcrime, y = ~Science, 
+            marker = list(size = 10,
+            color = 'rgba(255, 182, 193, .9)',
+            line = list(color = 'rgba(152, 0, 0, .8)',
+            width = 2))) %>%
+      layout(title = 'Science Score and Crime',
+             yaxis = list(zeroline = FALSE),
+             xaxis = list(zeroline = FALSE))
+      
   })
   
   
-  output$humidty_rain_cloudness_16days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
-      return(NULL)
-    
-    plot_ly(temp, x = ~date, y = ~clouds, type = 'bar', name = 'Clouds') %>%
-      add_trace(y = ~humidty, name = 'Humidity') %>%
-      layout(yaxis = list(title = '%'), barmode = 'group')%>%
-      add_trace(x = ~date, y = ~rain, type = 'scatter', mode = 'lines', name = 'Rainfall', yaxis = 'y2',
-                line = list(color = '#45171D'),
-                hoverinfo = "text",
-                text = ~paste(rain, '°F')) %>%
-      layout(title = '',
-             xaxis = list(title = ""),
-             yaxis = list(side = 'left', title = 'Humidity, clouds (%)', showgrid = FALSE, zeroline = FALSE),
-             yaxis2 = list(side = 'right', overlaying = "y", title = 'Rainfall', showgrid = FALSE, zeroline = FALSE))
-  })
+
   
-  
-  output$humidty_rain_cloudness_5days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
-      return(NULL)
-    temp=temp[1:5,]
-    plot_ly(temp, x = ~date, y = ~clouds, type = 'bar', name = 'Clouds') %>%
-      add_trace(y = ~humidty, name = 'Humidity') %>%
-      layout(yaxis = list(title = '%'), barmode = 'group')%>%
-      add_trace(x = ~date, y = ~rain, type = 'scatter', mode = 'lines', name = 'Rainfall', yaxis = 'y2',
-                line = list(color = '#45171D'),
-                hoverinfo = "text",
-                text = ~paste(rain, '°F')) %>%
-      layout(title = '',
-             xaxis = list(title = ""),
-             yaxis = list(side = 'left', title = 'Humidity, clouds (%)', showgrid = FALSE, zeroline = FALSE),
-             yaxis2 = list(side = 'right', overlaying = "y", title = 'Rainfall', showgrid = FALSE, zeroline = FALSE))      
-  })
-  
-  
-  output$humidty_rain_cloudness_3days=renderPlotly({
-    temp=selected_data()
-    if(is.null(temp))
-      return(NULL)
-    temp=temp[1:3,]
-    plot_ly(temp, x = ~date, y = ~clouds, type = 'bar', name = 'Clouds') %>%
-      add_trace(y = ~humidty, name = 'Humidity') %>%
-      layout(yaxis = list(title = '%'), barmode = 'group')%>%
-      add_trace(x = ~date, y = ~rain, type = 'scatter', mode = 'lines', name = 'Rainfall', yaxis = 'y2',
-                line = list(color = '#45171D'),
-                hoverinfo = "text",
-                text = ~paste(rain, '°F')) %>%
-      layout(title = '',
-             xaxis = list(title = ""),
-             yaxis = list(side = 'left', title = 'Humidity, clouds (%)', showgrid = FALSE, zeroline = FALSE),
-             yaxis2 = list(side = 'right', overlaying = "y", title = 'Rainfall', showgrid = FALSE, zeroline = FALSE))     
-  })
   
   condition1<-reactive({
     if(is.null(selected_data())){

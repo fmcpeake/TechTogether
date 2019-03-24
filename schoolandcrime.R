@@ -142,4 +142,7 @@ rownames(school_crime1) <- school$SCH_LABEL
 school4 <- read.csv("school_4.csv")
 schoolinfo <- school4[, c(2,3,8,9,14,15,20,25,43,68,84,101)]
 finaldata <- left_join(school_crime1[,c(2,3,5,9,10)], schoolinfo, by="SCH_LABEL")
+colnames(finaldata)[c(13:16)] <- c("Dropout", "Science", "Math", "ELA") 
+finaldata$Math <- round(finaldata$Math * 100/560, 1)
+finaldata$ELA <- round(finaldata$ELA * 100/560, 1)
 
