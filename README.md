@@ -27,6 +27,8 @@ crime rates, dropout rates, and MCAS scores.
 
 - school_4.csv: Combined all school's information which used for visualization
 
+Data source: Massachusetts Department of Elementary and Secondary Education, City of Boston
+
 
 ## Visualization (R Shiny APP)
 
